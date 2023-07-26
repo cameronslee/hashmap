@@ -1,0 +1,4 @@
+.vscode/*
+hashmap.dSYM/*
+*.o
+hashmap
