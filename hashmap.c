@@ -1,16 +1,16 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include "hashes.h"
+#include "hashmap.h"
 
-struct pair {
-  uint32_t first;
-  const char * second;
-};
-
-struct node {
-  struct pair data;
-  struct node* next;
-};
+/*
+djb33_hash
+*/
+uint32_t djb33_hash(const char* str) {
+  uint32_t hash = 5381;
+  int c;
+  while ((c = *str++)) {
+    hash = ((hash << 5) + hash) + c;
+  }
+  return hash;
+}
 
 struct node* create_node(uint32_t first, const char* second) {
   struct node* n = (struct node*)malloc(sizeof(struct node));
@@ -54,15 +54,8 @@ void print_list(struct node* head) {
   printf("\n");
 }
 
-struct unordered_map {
-  struct node* list;
-  int bucket_size;
-  int total_elements;
-  float max_load_factor; //default 1
-};
-
-struct unordered_map* init_map(struct node* head, int bucket_size, int total_elements, float max_load_factor) {
-  struct unordered_map* map = (struct unordered_map*)malloc(sizeof(struct unordered_map));
+struct hashmap* init_map(struct node* head, int bucket_size, int total_elements, float max_load_factor) {
+  struct hashmap* map = (struct hashmap*)malloc(sizeof(struct hashmap));
   map->list = head;
   map->bucket_size = bucket_size;
   map->total_elements = total_elements;
@@ -71,7 +64,7 @@ struct unordered_map* init_map(struct node* head, int bucket_size, int total_ele
   return map;
 }
 
-struct node* find(uint32_t key, struct unordered_map* map) {
+struct node* find(uint32_t key, struct hashmap* map) {
   struct node *iter, *first;
   first = map->list;
   for (iter = first; iter != NULL; iter = iter->next) {
@@ -85,7 +78,7 @@ uint32_t hash(const char* key) {
   return hashed_key;
 }
 
-void delete(uint32_t key, struct unordered_map* map) {
+void delete(uint32_t key, struct hashmap* map) {
   struct node* it = find(key, map);
   if(it != NULL) {
     delete_node(&map->list, key);
@@ -93,7 +86,7 @@ void delete(uint32_t key, struct unordered_map* map) {
   }
 }
 
-void rehash(struct unordered_map* map) {
+void rehash(struct hashmap* map) {
   if(map->total_elements / map->bucket_size > map->max_load_factor) {
     return;
   }
@@ -108,7 +101,7 @@ void rehash(struct unordered_map* map) {
   map->list = new_list;
 }
 
-void insert(const char* val, struct unordered_map* map) {
+void insert(const char* val, struct hashmap* map) {
   struct node* it = find(hash(val), map);
   //value is found, modify the value
   if(it != NULL) {
@@ -122,13 +115,3 @@ void insert(const char* val, struct unordered_map* map) {
   rehash(map);
 }
 
-int main()
-{
-  struct node* n = create_node(-1,"foo");
-  struct unordered_map *map = init_map(n, 1, 1, 1);
-  insert("foobar",map);
-  insert("foobar",map);
-  insert("barfoo",map);
-  print_list(map->list);
-  return 0;
-}
