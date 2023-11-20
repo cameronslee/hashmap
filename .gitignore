@@ -2,3 +2,5 @@
 *.dSYM
 *.o
 hashmap
+a.out
+*.DS_Store

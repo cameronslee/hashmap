@@ -12,6 +12,27 @@ uint32_t djb33_hash(const char* str) {
   return hash;
 }
 
+/* generic C-string hashing function */
+uint32_t str_hash(const char *s)
+{
+  uint32_t h = 0;
+
+  while (*s) {
+    h = h * 31 + *s;
+    s++;
+  }
+  return h;
+}
+
+void *get_hash_function(int n) {
+  if (n == DJB33) {
+    void* hash_function = (void*)&djb33_hash;
+    return hash_function;
+  }
+
+  return NULL;
+}
+
 struct node* create_node(uint32_t first, const char* second) {
   struct node* n = (struct node*)malloc(sizeof(struct node));
   n->data.first = first;
@@ -73,8 +94,10 @@ struct node* find(uint32_t key, struct hashmap* map) {
   return iter;
 }
 
-uint32_t hash(const char* key) {
-  uint32_t hashed_key = djb33_hash(key);
+uint32_t hash(const char* key, int hash_strategy) {
+  void *func_ptr = get_hash_function(hash_strategy);
+  uint32_t (*hash_function)(const char*) = (uint32_t (*)(const char*))func_ptr;
+  uint32_t hashed_key = hash_function(key);
   return hashed_key;
 }
 
@@ -87,7 +110,7 @@ void delete(uint32_t key, struct hashmap* map) {
 }
 
 void rehash(struct hashmap* map) {
-  if(map->total_elements / map->bucket_size > map->max_load_factor) {
+  if (map->total_elements / map->bucket_size > map->max_load_factor) {
     return;
   }
   map->bucket_size *= 2;
@@ -101,17 +124,22 @@ void rehash(struct hashmap* map) {
   map->list = new_list;
 }
 
-void insert(const char* val, struct hashmap* map) {
-  struct node* it = find(hash(val), map);
+void insert(const char* val, struct hashmap* map, int hash_strategy) {
+  struct node* it = find(hash(val, hash_strategy), map);
   //value is found, modify the value
   if(it != NULL) {
     it->data.second = val;
     return;
   }
   //does not exist, push to list
-  push_node(&map->list, hash(val), val);
+  push_node(&map->list, hash(val, hash_strategy), val);
   map->total_elements++;
   //rehash if load factor is greater than max load factor
   rehash(map);
+}
+
+void teardown(struct hashmap *map) {
+  free(map->list);
+  free(map);
 }
 
